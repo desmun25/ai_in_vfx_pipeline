@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI vs Manual HDRI Generation: A Comparative Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  /* ---------- Design tokens ---------- */
+  :root{
+    --bg: #121412;
+    --surface: #191c19;
+    --surface-2: #1f231f;
+    --line: #2b302b;
+    --text: #ECEBE4;
+    --text-dim: #9AA39A;
+    --text-faint: #6b756c;
+    --ai: #57d999;        /* AI-generated HDRI — same accent family as other tests */
+    --ai-dim: #2f6b4c;
+    --og: #7fa3c9;         /* original, manually produced HDRI */
+    --og-dim: #3c5468;
+    --radius: 3px;
+    --edge: clamp(24px, 6vw, 72px);
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{
+    font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  a{ color: var(--ai); text-decoration-color: var(--ai-dim); text-underline-offset: 3px; }
+  a:hover{ text-decoration-color: var(--ai); }
+
+  ::selection{ background: var(--ai-dim); color: #fff; }
+  :focus-visible{ outline: 2px solid var(--ai); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 var(--edge); }
+  .prose{ max-width: 100%; }
+
+  section{ padding: 132px 0 96px 0; }
+
+  .kicker{ color: var(--text-faint); font-size: 14px; margin: 8px 0 24px 0; }
+
+  /* ---------- Site nav ---------- */
+  .sitenav{
+    position: sticky; top:0; z-index: 40;
+    background: rgba(18,20,18,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .sitenav .wrap{ display:flex; align-items:center; justify-content:space-between; height: 56px; }
+  .sitenav .brand{
+    font-family: "Space Grotesk"; font-weight:600; font-size:14.5px; letter-spacing: -0.01em;
+    color: var(--text); text-decoration: none;
+  }
+  .sitenav nav{ display:flex; gap: 26px; }
+  .sitenav nav a{ color: var(--text-dim); font-size: 14px; text-decoration:none; }
+  .sitenav nav a:hover{ color: var(--text); }
+  .sitenav nav a[aria-current="page"]{ color: var(--ai); }
+  @media (max-width: 560px){ .sitenav nav{ gap: 16px; } }
+
+  /* ---------- Hero ---------- */
+  .hero{ padding-top: 96px; padding-bottom: 64px; }
+  .hero h1{ font-size: clamp(32px, 4.8vw, 50px); max-width: 24ch; }
+
+  section h2{ font-size: 28px; margin-bottom: 22px; }
+  section p{ margin: 0 0 18px 0; color: var(--text); }
+  section p:last-child{ margin-bottom:0; }
+  .prose p{ color: #d8d7ce; }
+
+  /* ---------- Process list ---------- */
+  .process{
+    margin-top: 28px;
+    border-left: 2px solid var(--og-dim);
+    padding: 4px 0 4px 20px;
+  }
+  .process p{ font-size: 15px; color: var(--text-dim); }
+
+  /* ---------- Tool section ---------- */
+  #tool{ padding-top: 88px; }
+  .tool-head p{ color: var(--text-dim); max-width: 56ch; margin-top: 10px; }
+
+  .stage-shell{ background: var(--surface); border: 1px solid var(--line); }
+
+  .stage-meta{
+    display:flex; justify-content: space-between; align-items:center;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    font-family: "IBM Plex Mono"; font-size: 12.5px; color: var(--text-faint);
+    flex-wrap: wrap; gap: 8px;
+  }
+
+  .stage-body{
+    display:grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-rows: 1fr 44px;
+  }
+
+  .axis-v{
+    grid-column: 1; grid-row: 1;
+    display:flex; flex-direction:column; align-items:center; justify-content: space-between;
+    padding: 14px 0; position: relative;
+  }
+  .axis-v .lab{
+    font-family:"IBM Plex Mono"; font-size: 10.5px; color: var(--text-dim);
+    writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 0.04em;
+  }
+  .axis-v .lab.bottom{ transform: rotate(180deg); }
+  .vrange-holder{ flex: 1; display:flex; align-items:center; justify-content:center; width: 100%; }
+  input[type="range"].vrange{
+    -webkit-appearance: none; appearance: none;
+    width: 140px; height: 3px; transform: rotate(-90deg);
+    background: var(--line); outline: none; margin:0;
+  }
+
+  .axis-h{
+    grid-column: 2; grid-row: 2;
+    display:flex; align-items:center; gap: 14px; padding: 0 18px;
+  }
+  .axis-h .lab{
+    font-family:"IBM Plex Mono"; font-size: 10.5px; color: var(--text-dim); white-space: nowrap;
+  }
+  input[type="range"].hrange{
+    -webkit-appearance: none; appearance: none;
+    flex:1; height: 3px; background: var(--line); outline:none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--ai); border: 2px solid #0d0f0d; cursor: pointer; margin-top: -5px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--ai); border: 2px solid #0d0f0d; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height:3px; background: var(--line); }
+
+  .stage{
+    grid-column: 2; grid-row: 1;
+    position: relative; aspect-ratio: 16/9; width: 100%;
+    overflow: hidden; cursor: crosshair; background: #000; touch-action: none;
+  }
+  .stage img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit: cover; pointer-events:none; display:block;
+  }
+
+  .guide{ position:absolute; background: rgba(236,235,228,0.55); pointer-events:none; }
+  .guide.h{ left:0; right:0; height:1px; }
+  .guide.v{ top:0; bottom:0; width:1px; }
+
+  .crosshair{
+    position:absolute; width: 34px; height: 34px;
+    transform: translate(-50%,-50%); border-radius: 50%;
+    border: 1.5px solid rgba(236,235,228,0.9);
+    background: rgba(18,20,18,0.35); backdrop-filter: blur(1px);
+    cursor: grab; display:flex; align-items:center; justify-content:center;
+  }
+  .crosshair:active{ cursor: grabbing; }
+  .crosshair::before, .crosshair::after{ content:""; position:absolute; background: rgba(236,235,228,0.9); }
+  .crosshair::before{ width: 12px; height: 1.5px; }
+  .crosshair::after{ width: 1.5px; height: 12px; }
+
+  .quad-label{
+    position:absolute; font-family: "IBM Plex Mono"; font-size: 10.5px;
+    color: rgba(236,235,228,0.75); background: rgba(0,0,0,0.35);
+    padding: 3px 7px; letter-spacing: 0.02em; pointer-events:none;
+  }
+  .quad-label.tl{ top: 8px; left: 8px; }
+  .quad-label.tr{ top: 8px; right: 8px; text-align:right; }
+  .quad-label.bl{ bottom: 8px; left: 8px; }
+  .quad-label.br{ bottom: 8px; right: 8px; text-align:right; }
+  .quad-label.tr, .quad-label.br{ color: rgba(87, 217, 153, 0.9); }
+
+  .tool-foot-note{ margin-top: 20px; font-size: 13.5px; color: var(--text-faint); }
+
+  .callout{
+    margin-top: 28px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    font-size: 14.5px;
+    color: var(--text-dim);
+  }
+  .callout strong{ color: var(--text); }
+  .callout code{
+    font-family: "IBM Plex Mono", monospace; font-size: 13px;
+    background: var(--surface-2); padding: 1px 6px; border-radius: 2px; color: var(--ai);
+  }
+
+  /* ---------- Verdict ---------- */
+  .verdict{
+    margin-top: 36px;
+    display:flex; align-items:center; gap: 16px;
+    background: var(--surface); border: 1px solid var(--og-dim);
+    padding: 16px 20px; border-radius: var(--radius);
+  }
+  .verdict .v-tag{
+    font-family: "IBM Plex Mono"; font-size: 12px; font-weight: 500;
+    color: var(--og); background: color-mix(in srgb, var(--og) 16%, transparent);
+    padding: 5px 12px; border-radius: 20px; white-space: nowrap; flex: none;
+  }
+  .verdict p{ margin: 0; font-size: 14.5px; color: var(--text-dim); }
+
+  .conclusion{ margin-top: 56px; }
+
+  footer{
+    padding: 48px 0 64px 0;
+    color: var(--text-faint);
+    font-size: 13.5px;
+    border-top: 1px solid var(--line);
+  }
+  footer .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap: 14px; }
+
+  @media (max-width: 640px){
+    section{ padding: 88px 0 64px 0; }
+    .stage-body{ grid-template-columns: 30px 1fr; }
+    .axis-v .lab{ font-size: 9px; }
+    .verdict{ flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sitenav">
+  <div class="wrap">
+    <a class="brand" href="index.html">AI in VFX Pipeline</a>
+    <nav>
+      <a href="corridor-key.html">Corridor Key</a>
+      <a href="environment-generation.html" aria-current="page">Environment Generation</a>
+      <a href="photogrammetry.html">Photogrammetry</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero wrap">
+    <h1>AI vs Manual HDRI Generation</h1>
+  </section>
+
+  <!-- ================= INTRODUCTION ================= -->
+  <section id="introduction" class="wrap">
+    <div class="prose">
+      <p class="kicker">Introduction</p>
+      <p>
+        The aim of this test will be to compare an HDRI skydome created by me using a program
+        called PTGui, with an AI generated one created using Hyper 3D's HDRI generator, using a
+        reference image of the real world location I was attempting to match.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="plan" class="wrap">
+    <div class="prose">
+      <p class="kicker">Plan</p>
+      <p>
+        The plan for this test was that I would re-use an HDRI I created for one of my A level
+        productions of the desert near my home in Qatar and compare those results two those of
+        the AI generated model. There were several reasons for this. The first is that one of the
+        main reasons that this interested me is that HDRI generation is a laborious, difficult
+        process.
+      </p>
+      <div class="process">
+        <p>
+          To create an HDRI you most place a camera on a tripod and use bracketed exposures to
+          photograph 3 photos for each angle you photograph, one at a normal exposure, one under
+          exposed, and one over exposed. You must repeat this with the camera pointed in every
+          direction to capture the environment in 360*. These sets of three images are then each
+          combined into a single HDR (High Dynamic Range) image, and these HDR images are then
+          stitched together into a 360* panorama using a program of your choice, in my case
+          PTGui, largely because it is free to use.
+        </p>
+      </div>
+      <p>
+        That process is as long and boring as it sounds and is precisely why I hoped that an AI
+        solution might be more efficient. The second reason for me wanting to conduct the test
+        using my previously created HDRI is that it allows me to create a 1 for 1 comparison in a
+        production environment. As with the corridor key test, being able to directly compare
+        results is valuable, especially when there are obvious technical flaws in my work due to
+        the limitations of being a singe creator with a limited budget. My HDRI was not truly
+        HDR, it did not have the dynamic range necessary to accurately replicate the light in the
+        environment, meaning that I had to supplement the HDRI with a sun lamp in order to produce
+        the shots.
+      </p>
+      <p>
+        Perhaps an AI generated HDRI based on a reference image of the environment it must match,
+        will be able to speed up this process and overcome some of the pitfalls of my bodged
+        together HDRI?
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= HYPOTHESIS ================= -->
+  <section id="hypothesis" class="wrap">
+    <div class="prose">
+      <p class="kicker">Expectations / Hypothesis</p>
+      <p>
+        I anticipate that the AI generated HDRI will less accurately depict the environment that
+        the scene is supposed to match, as the photographic reference it will be basing it's
+        generation on is only used as reference, rather than directly as images to stitch
+        together into the final result. However, I expect that it's stitching will be almost
+        flawless, and that the HDRI's it produces will be truly HDR, and will be able to light the
+        scene without the need for any additional CG lights, unlike the HDRI I was able to create
+        myself using traditional methods.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= TOOL ================= -->
+  <section id="tool" class="wrap">
+    <div class="tool-head">
+      <p class="kicker">Comparison tool</p>
+      <p>Drag the crosshair, or use the two sliders, to move between lighting state and generation method independently.</p>
+    </div>
+
+    <div class="stage-shell">
+      <div class="stage-meta">
+        <span>DESERT SKYDOME — QATAR</span>
+      </div>
+
+      <div class="stage-body">
+        <div class="axis-v">
+          <span class="lab top">WITH LIGHT</span>
+          <div class="vrange-holder">
+            <input type="range" class="vrange" id="rangeY" min="0" max="100" value="50"
+              aria-label="Lighting state: with light to without light" aria-orientation="vertical">
+          </div>
+          <span class="lab bottom">WITHOUT LIGHT</span>
+        </div>
+
+        <div class="stage" id="stage" tabindex="0"
+             aria-label="Two-axis image comparison. Drag vertically to switch between the scene with and without additional lighting. Drag horizontally to compare the original and AI generated HDRI. Arrow keys also work.">
+          <img id="imgTL" alt="Original HDRI, with additional light">
+          <img id="imgTR" alt="AI generated HDRI, with additional light">
+          <img id="imgBL" alt="Original HDRI, without additional light">
+          <img id="imgBR" alt="AI generated HDRI, without additional light">
+
+          <span class="quad-label tl">ORIGINAL · WITH LIGHT</span>
+          <span class="quad-label tr">AI GENERATED · WITH LIGHT</span>
+          <span class="quad-label bl">ORIGINAL · WITHOUT LIGHT</span>
+          <span class="quad-label br">AI GENERATED · WITHOUT LIGHT</span>
+
+          <div class="guide h" id="guideH"></div>
+          <div class="guide v" id="guideV"></div>
+          <div class="crosshair" id="crosshair"></div>
+        </div>
+
+        <div class="axis-h">
+          <span class="lab left">ORIGINAL</span>
+          <input type="range" class="hrange" id="rangeX" min="0" max="100" value="50"
+            aria-label="Generation method: original to AI generated">
+          <span class="lab right">AI GENERATED</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="tool-foot-note">All four renders use the same camera and framing, lit only by the skydome shown (plus the sun lamp noted above, where present) so the lighting itself is what's being compared.</p>
+
+    <div class="callout">
+      <strong>This build reads from an <code>Environment_Channels</code> folder</strong> placed next to this
+      HTML file, expecting <code>AI_With_Light.jpg</code>, <code>AI_Without_Light.jpg</code>,
+      <code>Original_With_Light.jpg</code> and <code>Original_Without_Light.jpg</code>. If your
+      exports use a different extension, change the single <code>IMAGE_EXT</code> constant near the
+      top of the <code>&lt;script&gt;</code> block.
+    </div>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section id="results" class="wrap">
+    <div class="prose">
+      <p class="kicker">Results</p>
+      <p>
+        Overall, it is clear that the results of this test were a fail for the AI. There are
+        several problems, the biggest of which is that the end results were not truly HDR (High
+        Dynamic Range) meaning that to look anywhere near good the need to be supplemented with
+        additional lights inside of blender, failing to overcome one of the key problems with my
+        traditionally created HDRI.
+      </p>
+      <p>
+        Additionally, even when supported with additional lighting, the results that it produces
+        are clearly of worse quality than the original. They do not look nearly as accurate
+        because the lighting in the AI generated world is not physically based, meaning that you
+        cannot place a light in the scene approximating in the position of the sun and expect it
+        to light your objects realistically, as the shadows cast by objects in the background are
+        not motivated by a sun, and do not even maintain a consistent direction themselves.
+      </p>
+      <p>
+        While laborious, it is clear that for now, the process of manually creating an HDRI is the
+        best way to go for this sort of thing in order to produce realistic, high quality results.
+      </p>
+    </div>
+
+    <div class="verdict">
+      <span class="v-tag">Original wins</span>
+      <p>The manually created HDRI outperformed the AI generated version on both physically accurate lighting and true dynamic range.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  /* =========================================================
+     IMAGE MANIFEST — reads directly from the Environment_Channels
+     folder. Drop that folder next to this HTML file.
+
+     If your exports aren't .jpg, change IMAGE_EXT below — every
+     path updates from that one line.
+  ========================================================= */
+  const CHANNELS_DIR = "Environment_Channels";
+  const IMAGE_EXT = ".png";
+
+  const IMAGES = {
+    origLight:   `${CHANNELS_DIR}/Original_With_Light${IMAGE_EXT}`,
+    aiLight:     `${CHANNELS_DIR}/AI_With_Light${IMAGE_EXT}`,
+    origNoLight: `${CHANNELS_DIR}/Original_Without_Light${IMAGE_EXT}`,
+    aiNoLight:   `${CHANNELS_DIR}/AI_Without_Light${IMAGE_EXT}`
+  };
+
+  const stage = document.getElementById('stage');
+  const imgTL = document.getElementById('imgTL'); // original / with light
+  const imgTR = document.getElementById('imgTR'); // AI / with light
+  const imgBL = document.getElementById('imgBL'); // original / without light
+  const imgBR = document.getElementById('imgBR'); // AI / without light
+
+  const crosshair = document.getElementById('crosshair');
+  const guideH = document.getElementById('guideH');
+  const guideV = document.getElementById('guideV');
+  const rangeX = document.getElementById('rangeX');
+  const rangeY = document.getElementById('rangeY');
+
+  imgTL.src = IMAGES.origLight;
+  imgTR.src = IMAGES.aiLight;
+  imgBL.src = IMAGES.origNoLight;
+  imgBR.src = IMAGES.aiNoLight;
+
+  let pos = { x: 50, y: 50 };
+  let dragging = false;
+
+  function setClip(){
+    const x = pos.x, y = pos.y;
+    imgTL.style.clipPath = `inset(0% ${100-x}% ${100-y}% 0%)`;
+    imgTR.style.clipPath = `inset(0% 0% ${100-y}% ${x}%)`;
+    imgBL.style.clipPath = `inset(${y}% ${100-x}% 0% 0%)`;
+    imgBR.style.clipPath = `inset(${y}% 0% 0% ${x}%)`;
+    crosshair.style.left = x + '%';
+    crosshair.style.top = y + '%';
+    guideH.style.top = y + '%';
+    guideV.style.left = x + '%';
+  }
+
+  function setPosition(x, y, fromRange){
+    pos.x = Math.min(100, Math.max(0, x));
+    pos.y = Math.min(100, Math.max(0, y));
+    setClip();
+    if (!fromRange){
+      rangeX.value = pos.x;
+      rangeY.value = pos.y;
+    }
+  }
+
+  function pointFromEvent(e){
+    const r = stage.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+    const x = ((cx - r.left) / r.width) * 100;
+    const y = ((cy - r.top) / r.height) * 100;
+    return {x, y};
+  }
+
+  stage.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    stage.setPointerCapture(e.pointerId);
+    const p = pointFromEvent(e);
+    setPosition(p.x, p.y);
+  });
+  stage.addEventListener('pointermove', (e)=>{
+    if (!dragging) return;
+    const p = pointFromEvent(e);
+    setPosition(p.x, p.y);
+  });
+  window.addEventListener('pointerup', ()=>{ dragging = false; });
+
+  stage.addEventListener('keydown', (e)=>{
+    const step = e.shiftKey ? 10 : 3;
+    if (e.key === 'ArrowLeft')  { setPosition(pos.x - step, pos.y); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { setPosition(pos.x + step, pos.y); e.preventDefault(); }
+    if (e.key === 'ArrowUp')    { setPosition(pos.x, pos.y - step); e.preventDefault(); }
+    if (e.key === 'ArrowDown')  { setPosition(pos.x, pos.y + step); e.preventDefault(); }
+  });
+
+  rangeX.addEventListener('input', ()=> setPosition(parseFloat(rangeX.value), pos.y, true));
+  rangeY.addEventListener('input', ()=> setPosition(pos.x, parseFloat(rangeY.value), true));
+
+  setClip();
+})();
+</script>
+
+<footer>
+  <div class="wrap">
+    <span>AI vs manual HDRI generation: a comparative test.</span>
+    <span>HDRI generated with <a href="https://hyper3d.ai/" target="_blank" rel="noopener">Hyper 3D</a></span>
+  </div>
+</footer>
+</body>
+</html>

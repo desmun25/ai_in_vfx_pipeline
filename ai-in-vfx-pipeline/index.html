@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI in the VFX Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --bg: #121412;
+    --surface: #191c19;
+    --surface-2: #1f231f;
+    --line: #2b302b;
+    --text: #ECEBE4;
+    --text-dim: #9AA39A;
+    --text-faint: #6b756c;
+    --ck: #57d999;
+    --ck-dim: #2f6b4c;
+    --rs: #7fa3c9;
+    --radius: 3px;
+    --edge: clamp(24px, 6vw, 72px);
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{
+    font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+    font-weight: 600; line-height: 1.15; margin: 0; letter-spacing: -0.01em;
+  }
+  a{ color: var(--ck); text-decoration-color: var(--ck-dim); text-underline-offset: 3px; }
+  a:hover{ text-decoration-color: var(--ck); }
+
+  ::selection{ background: var(--ck-dim); color: #fff; }
+  :focus-visible{ outline: 2px solid var(--ck); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 var(--edge); }
+
+  section{ padding: 132px 0 96px 0; }
+  .kicker{ color: var(--text-faint); font-size: 14px; margin: 8px 0 24px 0; }
+
+  /* ---------- Site nav ---------- */
+  .sitenav{
+    position: sticky; top:0; z-index: 40;
+    background: rgba(18,20,18,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .sitenav .wrap{ display:flex; align-items:center; justify-content:space-between; height: 56px; }
+  .sitenav .brand{
+    font-family: "Space Grotesk"; font-weight:600; font-size:14.5px; letter-spacing: -0.01em;
+    color: var(--text); text-decoration: none;
+  }
+  .sitenav nav{ display:flex; gap: 26px; }
+  .sitenav nav a{ color: var(--text-dim); font-size: 14px; text-decoration:none; }
+  .sitenav nav a:hover{ color: var(--text); }
+  .sitenav nav a[aria-current="page"]{ color: var(--ck); }
+  @media (max-width: 560px){ .sitenav nav{ gap: 16px; } }
+
+  /* ---------- Hero ---------- */
+  .hero{ padding-top: 96px; padding-bottom: 56px; }
+  .hero h1{ font-size: clamp(34px, 5vw, 56px); max-width: 18ch; }
+  .hero p{ margin-top: 22px; color: var(--text-dim); font-size: 18px; max-width: 54ch; }
+
+  /* ---------- Test index ---------- */
+  #tests{ padding-top: 64px; }
+  .test-list{
+    display:flex; flex-direction:column;
+    border-top: 1px solid var(--line);
+  }
+  .test-row{
+    display:block;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--line);
+    padding: 36px 0;
+    transition: padding-left 0.15s ease;
+  }
+  .test-row:hover{ padding-left: 12px; }
+  .test-row-inner{
+    display:flex; justify-content:space-between; align-items:flex-start; gap: 32px;
+    flex-wrap: wrap;
+  }
+  .test-row .test-num{
+    font-family: "IBM Plex Mono"; font-size: 12.5px; color: var(--text-faint);
+    display:block; margin-bottom: 10px;
+  }
+  .test-row h2{
+    font-size: 24px;
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.15s ease;
+  }
+  .test-row:hover h2{ text-decoration-color: var(--ck-dim); }
+  .test-row p{
+    margin: 10px 0 0 0; color: var(--text-dim); font-size: 15px; max-width: 58ch;
+  }
+  .test-row .meta{
+    flex: none;
+    display:flex; flex-direction:column; align-items:flex-end; gap: 10px;
+    min-width: 160px;
+  }
+  .test-row .verdict-tag{
+    font-family: "IBM Plex Mono"; font-size: 11.5px; font-weight: 500;
+    padding: 4px 11px; border-radius: 20px; white-space: nowrap;
+  }
+  .test-row .verdict-tag.ai{ color: var(--ck); background: color-mix(in srgb, var(--ck) 16%, transparent); }
+  .test-row .verdict-tag.trad{ color: var(--rs); background: color-mix(in srgb, var(--rs) 16%, transparent); }
+  .test-row .verdict-tag.mixed{ color: var(--text-dim); background: var(--surface-2); }
+  .test-row .arrow{
+    font-family: "IBM Plex Mono"; font-size: 13px; color: var(--text-faint);
+  }
+  .test-row:hover .arrow{ color: var(--ck); }
+
+  @media (max-width: 700px){
+    .test-row-inner{ flex-direction: column; }
+    .test-row .meta{ align-items: flex-start; flex-direction: row; min-width: 0; }
+  }
+
+  /* ---------- About ---------- */
+  #about p{ color: #d8d7ce; max-width: 68ch; margin: 0 0 18px 0; }
+  #about p:last-child{ margin-bottom:0; }
+
+  footer{
+    padding: 48px 0 64px 0;
+    color: var(--text-faint);
+    font-size: 13.5px;
+    border-top: 1px solid var(--line);
+  }
+  footer .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap: 14px; }
+
+  @media (max-width: 640px){
+    section{ padding: 88px 0 64px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sitenav">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-current="page">AI in VFX Pipeline</a>
+    <nav>
+      <a href="corridor-key.html">Corridor Key</a>
+      <a href="environment-generation.html">Environment Generation</a>
+      <a href="photogrammetry.html">Photogrammetry</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero wrap" style="padding-top:96px;">
+    <h1>AI in the VFX pipeline</h1>
+    <p>
+      A running series of head‑to‑head tests, comparing AI tools against the traditional methods
+      they're trying to replace, at each stage of a VFX pipeline: keying, environment lighting, and
+      3D model generation.
+    </p>
+  </section>
+
+  <!-- ================= TEST INDEX ================= -->
+  <section id="tests" class="wrap">
+    <p class="kicker">The tests</p>
+
+    <div class="test-list">
+      <a class="test-row" href="corridor-key.html">
+        <div class="test-row-inner">
+          <div>
+            <span class="test-num">01 — KEYING</span>
+            <h2>Corridor Key vs DaVinci Resolve's 3D Keyer</h2>
+            <p>A machine‑learning green screen keyer against Resolve's own 3D Keyer, scored across three shots on visual fidelity, technical fidelity, and efficacy of process.</p>
+          </div>
+          <div class="meta">
+            <span class="verdict-tag ai">Corridor Key wins, 6–3</span>
+            <span class="arrow">View test →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="test-row" href="environment-generation.html">
+        <div class="test-row-inner">
+          <div>
+            <span class="test-num">02 — ENVIRONMENT</span>
+            <h2>AI vs Manual HDRI Generation</h2>
+            <p>An AI generated HDRI skydome, from Hyper 3D, measured against a manually stitched HDRI built the traditional way in PTGui.</p>
+          </div>
+          <div class="meta">
+            <span class="verdict-tag trad">Original wins</span>
+            <span class="arrow">View test →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="test-row" href="photogrammetry.html">
+        <div class="test-row-inner">
+          <div>
+            <span class="test-num">03 — MODELLING</span>
+            <h2>Photogrammetry vs AI-Generated 3D Models</h2>
+            <p>Traditional photogrammetry in Polycam, built from 122 reference photos, against Tripo's single‑image AI model generation, both scanning the same human face.</p>
+          </div>
+          <div class="meta">
+            <span class="verdict-tag mixed">Traditional wins, unevenly matched</span>
+            <span class="arrow">View test →</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ================= ABOUT ================= -->
+  <section id="about" class="wrap">
+    <p class="kicker">About this research</p>
+    <p>
+      Each test here follows the same shape: a traditional VFX technique is pitted against an AI
+      tool aiming to do the same job, using the same source material wherever possible, and judged
+      as objectively as the task allows. Some tests score the result numerically; others come down
+      to a single clear verdict.
+    </p>
+    <p>
+      The aim isn't to declare AI tools universally better or worse than the methods they're
+      replacing, but to find out, test by test, where each one actually holds up in a real
+      production pipeline.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>AI in the VFX pipeline: a research project.</span>
+  </div>
+</footer>
+</body>
+</html>

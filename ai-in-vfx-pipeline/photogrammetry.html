@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photogrammetry vs AI-Generated Models: A Comparative Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --bg: #121412;
+    --surface: #191c19;
+    --surface-2: #1f231f;
+    --line: #2b302b;
+    --text: #ECEBE4;
+    --text-dim: #9AA39A;
+    --text-faint: #6b756c;
+    --ai: #57d999;      /* Tripo / AI generated model */
+    --ai-dim: #2f6b4c;
+    --og: #7fa3c9;       /* Polycam / traditional photogrammetry */
+    --og-dim: #3c5468;
+    --radius: 3px;
+    --edge: clamp(24px, 6vw, 72px);
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{
+    font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+    font-weight: 600; line-height: 1.15; margin: 0; letter-spacing: -0.01em;
+  }
+  a{ color: var(--ai); text-decoration-color: var(--ai-dim); text-underline-offset: 3px; }
+  a:hover{ text-decoration-color: var(--ai); }
+
+  ::selection{ background: var(--ai-dim); color: #fff; }
+  :focus-visible{ outline: 2px solid var(--ai); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 var(--edge); }
+  .prose{ max-width: 100%; }
+
+  section{ padding: 132px 0 96px 0; }
+
+  .kicker{ color: var(--text-faint); font-size: 14px; margin: 8px 0 24px 0; }
+
+  /* ---------- Site nav ---------- */
+  .sitenav{
+    position: sticky; top:0; z-index: 40;
+    background: rgba(18,20,18,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .sitenav .wrap{ display:flex; align-items:center; justify-content:space-between; height: 56px; }
+  .sitenav .brand{
+    font-family: "Space Grotesk"; font-weight:600; font-size:14.5px; letter-spacing: -0.01em;
+    color: var(--text); text-decoration: none;
+  }
+  .sitenav nav{ display:flex; gap: 26px; }
+  .sitenav nav a{ color: var(--text-dim); font-size: 14px; text-decoration:none; }
+  .sitenav nav a:hover{ color: var(--text); }
+  .sitenav nav a[aria-current="page"]{ color: var(--ai); }
+  @media (max-width: 560px){ .sitenav nav{ gap: 16px; } }
+
+  /* ---------- Hero ---------- */
+  .hero{ padding-top: 96px; padding-bottom: 64px; }
+  .hero h1{ font-size: clamp(32px, 4.8vw, 50px); max-width: 24ch; }
+
+  section h2{ font-size: 28px; margin-bottom: 22px; }
+  section p{ margin: 0 0 18px 0; color: var(--text); }
+  section p:last-child{ margin-bottom:0; }
+  .prose p{ color: #d8d7ce; }
+
+  .fairness-note{
+    margin-top: 28px;
+    border-left: 2px solid var(--og-dim);
+    padding: 4px 0 4px 20px;
+    font-size: 15px;
+    color: var(--text-dim);
+  }
+
+  /* ---------- Gallery section ---------- */
+  #gallery{ padding-top: 88px; }
+  .gallery-head p{ color: var(--text-dim); max-width: 56ch; margin-top: 10px; }
+
+  .gallery{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-top: 34px;
+  }
+  .gallery-card{ background: var(--surface); display:flex; flex-direction:column; }
+  .gallery-card .media{
+    position: relative; aspect-ratio: 4/3; background: #000; overflow: hidden;
+  }
+  .gallery-card video{
+    position:absolute; inset:0; width:100%; height:100%; object-fit: cover; display:block;
+  }
+  .gallery-card .media .tag{
+    position:absolute; top: 10px; left: 10px;
+    font-family: "IBM Plex Mono"; font-size: 11px; letter-spacing: 0.02em;
+    padding: 4px 9px; border-radius: 20px;
+    background: rgba(0,0,0,0.5);
+  }
+  .gallery-card.ai .media .tag{ color: var(--ai); }
+  .gallery-card.og .media .tag{ color: var(--og); }
+  .gallery-card .caption{ padding: 16px 20px; }
+  .gallery-card .caption h3{ font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .gallery-card .caption p{ font-size: 14px; color: var(--text-dim); margin: 0; }
+  .gallery-card .controls{
+    display:flex; align-items:center; gap: 10px;
+    padding: 0 20px 16px 20px;
+  }
+  .gallery-card button.play{
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--text);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .gallery-card button.play:hover{ border-color: var(--ai); }
+  .gallery-card.og button.play:hover{ border-color: var(--og); }
+  input[type="range"].scrub{
+    -webkit-appearance:none; appearance:none;
+    flex:1; height:3px; background: var(--line); outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--ai); border: 2px solid #0d0f0d; cursor: pointer; margin-top: -4.5px;
+  }
+  .gallery-card.og input[type="range"]::-webkit-slider-thumb{ background: var(--og); }
+  input[type="range"]::-moz-range-thumb{
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ai); border: 2px solid #0d0f0d; cursor:pointer;
+  }
+  .gallery-card.og input[type="range"]::-moz-range-thumb{ background: var(--og); }
+  input[type="range"]::-webkit-slider-runnable-track{ height:3px; background: var(--line); }
+
+  @media (max-width: 760px){
+    .gallery{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Reference image ---------- */
+  .reference{
+    margin-top: 48px;
+    display:flex; gap: 24px; align-items:flex-start; flex-wrap: wrap;
+  }
+  .reference .ref-media{
+    flex: none; width: 220px;
+    background: var(--surface); border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .reference .ref-media img{ display:block; width:100%; height:auto; }
+  .reference .ref-caption{ flex: 1; min-width: 220px; }
+  .reference .ref-caption p{ font-size: 14.5px; color: var(--text-dim); }
+  .reference .ref-caption .kicker{ margin: 0 0 10px 0; }
+
+  .tool-foot-note{ margin-top: 20px; font-size: 13.5px; color: var(--text-faint); }
+
+  .callout{
+    margin-top: 32px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    font-size: 14.5px;
+    color: var(--text-dim);
+  }
+  .callout strong{ color: var(--text); }
+  .callout code{
+    font-family: "IBM Plex Mono", monospace; font-size: 13px;
+    background: var(--surface-2); padding: 1px 6px; border-radius: 2px; color: var(--ai);
+  }
+
+  /* ---------- Verdict ---------- */
+  .verdict{
+    margin-top: 36px;
+    display:flex; align-items:center; gap: 16px;
+    background: var(--surface); border: 1px solid var(--og-dim);
+    padding: 16px 20px; border-radius: var(--radius);
+  }
+  .verdict .v-tag{
+    font-family: "IBM Plex Mono"; font-size: 12px; font-weight: 500;
+    color: var(--og); background: color-mix(in srgb, var(--og) 16%, transparent);
+    padding: 5px 12px; border-radius: 20px; white-space: nowrap; flex: none;
+  }
+  .verdict p{ margin: 0; font-size: 14.5px; color: var(--text-dim); }
+
+  footer{
+    padding: 48px 0 64px 0;
+    color: var(--text-faint);
+    font-size: 13.5px;
+    border-top: 1px solid var(--line);
+  }
+  footer .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap: 14px; }
+
+  @media (max-width: 640px){
+    section{ padding: 88px 0 64px 0; }
+    .verdict{ flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sitenav">
+  <div class="wrap">
+    <a class="brand" href="index.html">AI in VFX Pipeline</a>
+    <nav>
+      <a href="corridor-key.html">Corridor Key</a>
+      <a href="environment-generation.html">Environment Generation</a>
+      <a href="photogrammetry.html" aria-current="page">Photogrammetry</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero wrap">
+    <h1>Photogrammetry vs AI-Generated 3D Models</h1>
+  </section>
+
+  <!-- ================= INTRODUCTION ================= -->
+  <section id="introduction" class="wrap">
+    <div class="prose">
+      <p class="kicker">Introduction</p>
+      <p>
+        The aim of this test will be to compare the results of traditional photogrammetry with
+        the results of Tripo, a generative AI based program that produces a 3D model based off an
+        image reference.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="plan" class="wrap">
+    <div class="prose">
+      <p class="kicker">Plan</p>
+      <p>
+        To conduct this test, my plan was very simply to produce two separate 3d Models, one
+        using traditional photogrammetry in the user-friendly app Polycam, and the other in
+        Tripo. I will then produce a turntable render of each, with which we can compare the
+        quality of the two end products.
+      </p>
+      <p>
+        One of the most challenging things to produce a 3D model of with any methodology is a
+        human face. This is because it both contains an immense amount of detail, and is
+        something that other human beings are well accustomed to looking at, meaning that we as a
+        species are hypersensitive to any peculiarities and inaccuracies. For this reason, I
+        decided that the "object" I was going to scan was a human face.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= HYPOTHESIS ================= -->
+  <section id="hypothesis" class="wrap">
+    <div class="prose">
+      <p class="kicker">Expectations / Hypothesis</p>
+      <p>
+        It is my expectation that the traditional photogrammetry will be in general less polished
+        than the AI generated model, with a fairly uniform level of inaccuracy and imperfection,
+        while the AI generated model will be smoother, but less accurate to the source material
+        because it will be based off of a single image, meaning that it must generate features
+        that it cannot discern from the reference image.
+      </p>
+      <p>
+        Because of this, I anticipate that I will conclude that both have pro's and con's, and
+        that AI generated models will be the better way forward in scenarios where accuracy to the
+        reference is less important, while traditional photogrammetry, with it's strict adherence
+        to the features identified in the images it generates the model from, will remain the most
+        effective in situations where real-world accuracy is more important.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= GALLERY ================= -->
+  <section id="gallery" class="wrap">
+    <div class="gallery-head">
+      <p class="kicker">Turntables</p>
+      <p>Both models were rendered as a turntable from the same starting angle, so the two end products sit next to each other for a direct look.</p>
+    </div>
+
+    <div class="gallery">
+      <div class="gallery-card og">
+        <div class="media">
+          <span class="tag">TRADITIONAL · POLYCAM</span>
+          <video id="vidTrad" loop playsinline muted preload="auto" src="Photogrammetry_Channels/Traditional_Photogrammetry_Demo.mp4"></video>
+        </div>
+        <div class="caption">
+          <h3>Traditional photogrammetry</h3>
+          <p>122 reference photos, reconstructed in Polycam.</p>
+        </div>
+        <div class="controls">
+          <button class="play" id="playTrad" aria-label="Play">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 1L11 6L2 11V1Z" fill="#ECEBE4"/></svg>
+          </button>
+          <input type="range" class="scrub" id="scrubTrad" min="0" max="100" value="0" step="0.1" aria-label="Playback position, traditional photogrammetry turntable">
+        </div>
+      </div>
+
+      <div class="gallery-card ai">
+        <div class="media">
+          <span class="tag">AI GENERATED · TRIPO</span>
+          <video id="vidAI" loop playsinline muted preload="auto" src="Photogrammetry_Channels/tripo-showcase-9cad51c5-aada-4e87-9c59-d715281ab0ae.mp4"></video>
+        </div>
+        <div class="caption">
+          <h3>AI generated model</h3>
+          <p>A single reference photo, generated in Tripo.</p>
+        </div>
+        <div class="controls">
+          <button class="play" id="playAI" aria-label="Play">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 1L11 6L2 11V1Z" fill="#ECEBE4"/></svg>
+          </button>
+          <input type="range" class="scrub" id="scrubAI" min="0" max="100" value="0" step="0.1" aria-label="Playback position, AI generated turntable">
+        </div>
+      </div>
+    </div>
+
+    <div class="reference">
+      <div class="ref-media">
+        <img src="Photogrammetry_Channels/Zailey_Reference.jpg" alt="Reference photograph of Zailey, used as the source for both models">
+      </div>
+      <div class="ref-caption">
+        <p class="kicker">Reference image</p>
+        <p>Zailey, the subject photographed for both models: 122 angles for the Polycam scan, and this single frame as Tripo's only reference.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>This build reads from a <code>Photogrammetry_Channels</code> folder</strong> placed
+      next to this HTML file, expecting <code>Traditional_Photogrammetry_Demo.mp4</code>,
+      <code>tripo-showcase-9cad51c5-aada-4e87-9c59-d715281ab0ae.mp4</code>, and
+      <code>Zailey_Reference.jpg</code>. If your exports use different extensions, update the
+      <code>src</code> attributes on the two <code>&lt;video&gt;</code> elements and the reference
+      <code>&lt;img&gt;</code> directly.
+    </div>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section id="results" class="wrap">
+    <div class="prose">
+      <p class="kicker">Results</p>
+      <p>
+        Overall, I feel that Tripo performed worse than I anticipated here. It has gotten the
+        proportions of Zailey's (the person who's photograph I used as the reference for both
+        models) face wrong, exaggerating features such as the eye's and nose, and giving the end
+        result a slightly cartoonish look. I suspect that Tripo's model edges towards creating
+        more stylised models, and so even when given a reference of a real person, it adds some of
+        this "cartoonish" quality. This may be deliberate on the part of the developers, as it is
+        an effective strategy to avoid the pitfall of the "uncanny valley", where character's that
+        look almost, but not quite human, are perceived as looking weird and creepy, and so lead
+        to a more negative reading than those that err more towards a stylised, distinctly
+        non-human look.
+      </p>
+      <p>
+        The traditional photogrammetry on the other hand performed exactly as I expected it to,
+        creating a generally accurate model of Zailey with a nearly uniform 'lumpiness' coming
+        from imperfections in the model. It is worth noting that one thing I had not properly
+        accounted for is that these imperfections are not totally uniform, as the face is actually
+        more accurate to Zailey's real world face than other parts of the model. This is a result
+        of the fact that the set of photo's I took focused more heavily on her face, as the most
+        important part of the model, and when the program is giving more reference material to
+        work with, it generates a higher quality end result.
+      </p>
+      <p>
+        It is also worth noting that this test is in a way unfair. Tripo is working off a single
+        reference image, while Polycam is creating it's model from 122 photos. This is the nature
+        of the tools as the currently stand. Tripo (at least the free tier that I was using) can
+        only use one reference image. However, there is no theoretical reason why a generative AI
+        tool could not utilise multiple images, and I believe that a fairer test, where an AI tool
+        was also able to take advantage of 122 reference images, would produce a fairer test and
+        likely a higher quality AI generated result.
+      </p>
+    </div>
+
+    <div class="verdict">
+      <span class="v-tag">Traditional wins, on an uneven playing field</span>
+      <p>Polycam's 122-photo scan was the more accurate model of the two, but Tripo was working from a single reference image by the limits of its free tier, not by design.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  function wireUpPlayer(videoId, playBtnId, scrubId){
+    const video = document.getElementById(videoId);
+    const btn = document.getElementById(playBtnId);
+    const scrub = document.getElementById(scrubId);
+    let playing = false;
+
+    const iconPlay = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 1L11 6L2 11V1Z" fill="#ECEBE4"/></svg>';
+    const iconPause = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="2" y="1" width="3" height="10" fill="#ECEBE4"/><rect x="7" y="1" width="3" height="10" fill="#ECEBE4"/></svg>';
+
+    btn.addEventListener('click', ()=>{
+      if (playing){ video.pause(); } else { video.play().catch(()=>{}); }
+    });
+    video.addEventListener('play', ()=>{ playing = true; btn.innerHTML = iconPause; btn.setAttribute('aria-label','Pause'); });
+    video.addEventListener('pause', ()=>{ playing = false; btn.innerHTML = iconPlay; btn.setAttribute('aria-label','Play'); });
+
+    video.addEventListener('timeupdate', ()=>{
+      const d = video.duration || 0;
+      if (d > 0) scrub.value = (video.currentTime / d) * 100;
+    });
+    scrub.addEventListener('input', ()=>{
+      const d = video.duration || 0;
+      if (isFinite(d)) video.currentTime = (scrub.value / 100) * d;
+    });
+  }
+
+  wireUpPlayer('vidTrad', 'playTrad', 'scrubTrad');
+  wireUpPlayer('vidAI', 'playAI', 'scrubAI');
+})();
+</script>
+
+<footer>
+  <div class="wrap">
+    <span>Photogrammetry vs AI-generated models: a comparative test.</span>
+    <span>Model generation via <a href="https://www.tripo3d.ai/" target="_blank" rel="noopener">Tripo</a></span>
+  </div>
+</footer>
+</body>
+</html>

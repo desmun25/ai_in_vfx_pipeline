@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corridor Key vs DaVinci Resolve 3D Keyer: A Comparative Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  /* ---------- Design tokens ---------- */
+  :root{
+    --bg: #121412;
+    --surface: #191c19;
+    --surface-2: #1f231f;
+    --line: #2b302b;
+    --line-soft: #21251f;
+    --text: #ECEBE4;
+    --text-dim: #9AA39A;
+    --text-faint: #6b756c;
+    --ck: #57d999;        /* corridor key — chroma green */
+    --ck-dim: #2f6b4c;
+    --rs: #7fa3c9;         /* resolve — cool blue-grey */
+    --rs-dim: #3c5468;
+    --radius: 3px;
+    --measure: 640px;
+    --edge: clamp(24px, 6vw, 72px);
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{
+    font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  a{ color: var(--ck); text-decoration-color: var(--ck-dim); text-underline-offset: 3px; }
+  a:hover{ text-decoration-color: var(--ck); }
+  .mono{ font-family: "IBM Plex Mono", monospace; }
+
+  ::selection{ background: var(--ck-dim); color: #fff; }
+
+  :focus-visible{
+    outline: 2px solid var(--ck);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 var(--edge);
+  }
+  .prose{ max-width: 100%; }
+
+  section{ padding: 132px 0 96px 0; }
+
+  .kicker{
+    color: var(--text-faint);
+    font-size: 14px;
+    margin: 8px 0 24px 0;
+  }
+
+  /* ---------- Site nav ---------- */
+  .sitenav{
+    position: sticky; top:0; z-index: 40;
+    background: rgba(18,20,18,0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .sitenav .wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    height: 56px;
+  }
+  .sitenav .brand{
+    font-family: "Space Grotesk"; font-weight:600; font-size:14.5px; letter-spacing: -0.01em;
+    color: var(--text); text-decoration: none;
+  }
+  .sitenav .brand:hover{ text-decoration-color: var(--ck-dim); }
+  .sitenav nav{ display:flex; gap: 26px; }
+  .sitenav nav a{
+    color: var(--text-dim); font-size: 14px; text-decoration:none;
+  }
+  .sitenav nav a:hover{ color: var(--text); }
+  .sitenav nav a[aria-current="page"]{ color: var(--ck); }
+  @media (max-width: 560px){ .sitenav nav{ gap: 16px; } }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding-top: 96px; padding-bottom: 64px;
+  }
+  .hero h1{
+    font-size: clamp(32px, 4.8vw, 50px);
+    max-width: 20ch;
+  }
+
+  /* ---------- Prose sections ---------- */
+  section h2{ font-size: 28px; margin-bottom: 22px; }
+  section p{ margin: 0 0 18px 0; color: var(--text); }
+  section p:last-child{ margin-bottom:0; }
+  .prose p{ color: #d8d7ce; }
+
+  /* ---------- Framework triad ---------- */
+  .triad{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-top: 40px;
+  }
+  .triad .card{
+    background: var(--surface);
+    padding: 28px 26px;
+  }
+  .triad .card h3{
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .triad .card p{
+    font-size: 15px;
+    color: var(--text-dim);
+    margin: 0;
+  }
+  .triad .card .tag{
+    display:inline-block;
+    font-family: "IBM Plex Mono";
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 14px;
+  }
+  @media (max-width: 760px){
+    .triad{ grid-template-columns: 1fr; }
+  }
+
+  .scoring-note{
+    margin-top: 28px;
+    font-size: 15px;
+    color: var(--text-dim);
+  }
+
+  /* ---------- Results ---------- */
+  .results-summary{
+    display:flex; align-items:center; gap: clamp(32px, 6vw, 72px);
+    flex-wrap: wrap;
+    margin-top: 36px;
+    padding-bottom: 8px;
+  }
+  .donut-wrap{ flex: none; }
+  .donut{ width: 168px; height: 168px; display:block; }
+  .donut circle{ fill:none; stroke-width: 6; }
+  .donut .donut-track{ stroke: var(--line); }
+  .donut .donut-seg{ transform: rotate(-90deg); transform-origin: 21px 21px; }
+  .donut .donut-seg.ck{ stroke: var(--ck); stroke-dasharray: 66.7 33.3; }
+  .donut .donut-seg.rs{ stroke: var(--rs); stroke-dasharray: 33.3 66.7; stroke-dashoffset: -66.7; }
+  .donut .donut-total{
+    font-family: "Space Grotesk"; font-weight: 600; font-size: 8px; fill: var(--text);
+    text-anchor: middle;
+  }
+  .donut .donut-sub{
+    font-family: "IBM Plex Mono"; font-size: 3.4px; fill: var(--text-faint);
+    text-anchor: middle; letter-spacing: 0.04em;
+  }
+
+  .verdicts{
+    display:flex; flex-direction:column; gap: 10px;
+    flex: 1; min-width: 260px;
+  }
+  .verdict-row{
+    display:flex; align-items:center; justify-content:space-between; gap: 16px;
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 12px 16px;
+    border-radius: var(--radius);
+  }
+  .v-cat{ font-size: 14.5px; color: var(--text); }
+  .v-badge{
+    font-family: "IBM Plex Mono"; font-size: 12px; font-weight: 500;
+    padding: 4px 11px; border-radius: 20px; white-space: nowrap;
+  }
+  .v-badge.ck{ color: var(--ck); background: var(--ck-dim); background: color-mix(in srgb, var(--ck) 16%, transparent); }
+  .v-badge.rs{ color: var(--rs); background: var(--rs-dim); background: color-mix(in srgb, var(--rs) 16%, transparent); }
+
+  .matrix{
+    display:grid; grid-template-columns: 96px repeat(3, 1fr);
+    gap: 1px; background: var(--line); border: 1px solid var(--line);
+    margin-top: 48px;
+  }
+  .mcell{ background: var(--surface); padding: 14px 12px; display:flex; align-items:center; }
+  .mcell.mhead{
+    font-family:"IBM Plex Mono"; font-size: 11px; color: var(--text-faint); letter-spacing:0.02em;
+  }
+  .mcell.mrow{
+    font-family:"IBM Plex Mono"; font-size: 12.5px; color: var(--text-dim);
+  }
+  .mcell.chip{ font-size: 13px; gap: 8px; }
+  .mcell.chip::before{ content:""; width:8px; height:8px; border-radius:2px; flex:none; }
+  .mcell.chip.ck{ color: var(--ck); }
+  .mcell.chip.ck::before{ background: var(--ck); }
+  .mcell.chip.rs{ color: var(--rs); }
+  .mcell.chip.rs::before{ background: var(--rs); }
+
+  .conclusion{ margin-top: 56px; }
+
+  @media (max-width: 640px){
+    .results-summary{ flex-direction:column; align-items:flex-start; gap: 28px; }
+    .matrix{ grid-template-columns: 76px repeat(3, 1fr); font-size: 12px; }
+    .mcell{ padding: 10px 8px; }
+  }
+
+  /* ---------- Tool section ---------- */
+  #tool{ padding-top: 88px; }
+  .tool-head{
+    display:flex; justify-content: space-between; align-items:flex-end; gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 34px;
+  }
+  .tool-head p{ color: var(--text-dim); max-width: 56ch; margin-top: 10px;}
+
+  .shot-tabs{
+    display:flex; gap: 6px; flex-wrap: wrap;
+  }
+  .shot-tabs button{
+    font-family: "IBM Plex Mono";
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .shot-tabs button:hover{ color: var(--text); border-color: var(--text-faint); }
+  .shot-tabs button[aria-pressed="true"]{
+    color: var(--bg); background: var(--ck); border-color: var(--ck);
+  }
+
+  .stage-shell{
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .stage-meta{
+    display:flex; justify-content: space-between; align-items:center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    font-family: "IBM Plex Mono";
+    font-size: 12.5px;
+    color: var(--text-faint);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .stage-meta .shot-desc{ color: var(--text-dim); font-family: "IBM Plex Sans"; font-size: 14px; }
+
+  .stage-body{
+    display:grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-rows: 1fr 44px;
+  }
+
+  /* vertical axis slider (video / alpha) */
+  .axis-v{
+    grid-column: 1; grid-row: 1;
+    display:flex; flex-direction:column; align-items:center; justify-content: space-between;
+    padding: 14px 0;
+    position: relative;
+  }
+  .axis-v .lab{
+    font-family:"IBM Plex Mono"; font-size: 10.5px; color: var(--text-faint);
+    writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 0.04em;
+  }
+  .axis-v .lab.top{ color: var(--text-dim); }
+  .axis-v .lab.bottom{ transform: rotate(180deg); color: var(--text-dim); }
+  .vrange-holder{
+    flex: 1; display:flex; align-items:center; justify-content:center; width: 100%;
+  }
+  input[type="range"].vrange{
+    -webkit-appearance: none; appearance: none;
+    width: 140px; height: 3px;
+    transform: rotate(-90deg);
+    background: var(--line);
+    outline: none;
+    margin:0;
+  }
+
+  /* horizontal axis slider (original / corridor key) */
+  .axis-h{
+    grid-column: 2; grid-row: 2;
+    display:flex; align-items:center; gap: 14px;
+    padding: 0 18px;
+  }
+  .axis-h .lab{
+    font-family:"IBM Plex Mono"; font-size: 10.5px; color: var(--text-faint); white-space: nowrap;
+  }
+  .axis-h .lab.left{ color: var(--text-dim); }
+  .axis-h .lab.right{ color: var(--text-dim); }
+  input[type="range"].hrange{
+    -webkit-appearance: none; appearance: none;
+    flex:1; height: 3px; background: var(--line); outline:none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--ck);
+    border: 2px solid #0d0f0d;
+    cursor: pointer;
+    margin-top: -5px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--ck); border: 2px solid #0d0f0d; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{ height:3px; background: var(--line); }
+
+  .stage{
+    grid-column: 2; grid-row: 1;
+    position: relative;
+    aspect-ratio: 16/9;
+    width: 100%;
+    overflow: hidden;
+    cursor: crosshair;
+    background: #000;
+    touch-action: none;
+  }
+  .stage video{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit: cover;
+    pointer-events:none;
+    display:block;
+  }
+
+  .guide{
+    position:absolute; background: rgba(236,235,228,0.55); pointer-events:none;
+  }
+  .guide.h{ left:0; right:0; height:1px; }
+  .guide.v{ top:0; bottom:0; width:1px; }
+
+  .crosshair{
+    position:absolute; width: 34px; height: 34px;
+    transform: translate(-50%,-50%);
+    border-radius: 50%;
+    border: 1.5px solid rgba(236,235,228,0.9);
+    background: rgba(18,20,18,0.35);
+    backdrop-filter: blur(1px);
+    cursor: grab;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .crosshair:active{ cursor: grabbing; }
+  .crosshair::before, .crosshair::after{
+    content:""; position:absolute; background: rgba(236,235,228,0.9);
+  }
+  .crosshair::before{ width: 12px; height: 1.5px; }
+  .crosshair::after{ width: 1.5px; height: 12px; }
+
+  .quad-label{
+    position:absolute; font-family: "IBM Plex Mono"; font-size: 10.5px;
+    color: rgba(236,235,228,0.75);
+    background: rgba(0,0,0,0.35);
+    padding: 3px 7px;
+    letter-spacing: 0.02em;
+    pointer-events:none;
+  }
+  .quad-label.tl{ top: 8px; left: 8px; }
+  .quad-label.tr{ top: 8px; right: 8px; text-align:right; }
+  .quad-label.bl{ bottom: 8px; left: 8px; }
+  .quad-label.br{ bottom: 8px; right: 8px; text-align:right; }
+  .quad-label.tr, .quad-label.br{ color: rgba(87, 217, 153, 0.9); }
+
+  .transport{
+    display:flex; align-items:center; gap: 14px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--line);
+  }
+  .transport button.play{
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex: none;
+  }
+  .transport button.play:hover{ border-color: var(--ck); }
+  .transport .scrub{
+    flex:1;
+  }
+  input[type="range"].scrub{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:3px; background: var(--line); outline:none;
+  }
+  .transport .time{
+    font-family:"IBM Plex Mono"; font-size: 12px; color: var(--text-faint);
+    min-width: 82px; text-align:right;
+  }
+
+  .tool-foot-note{
+    margin-top: 20px;
+    font-size: 13.5px;
+    color: var(--text-faint);
+  }
+
+  /* replace-footage callout */
+  .callout{
+    margin-top: 56px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    font-size: 14.5px;
+    color: var(--text-dim);
+  }
+  .callout strong{ color: var(--text); }
+  .callout code{
+    font-family: "IBM Plex Mono", monospace; font-size: 13px;
+    background: var(--surface-2); padding: 1px 6px; border-radius: 2px; color: var(--ck);
+  }
+
+  /* ---------- footer ---------- */
+  footer{
+    padding: 48px 0 64px 0;
+    color: var(--text-faint);
+    font-size: 13.5px;
+    border-top: 1px solid var(--line);
+  }
+  footer .wrap{
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap: 14px;
+  }
+
+  @media (max-width: 640px){
+    section{ padding: 88px 0 64px 0; }
+    .stage-body{ grid-template-columns: 30px 1fr; }
+    .axis-v .lab{ font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sitenav">
+  <div class="wrap">
+    <a class="brand" href="index.html">AI in VFX Pipeline</a>
+    <nav>
+      <a href="corridor-key.html" aria-current="page">Corridor Key</a>
+      <a href="environment-generation.html">Environment Generation</a>
+      <a href="photogrammetry.html">Photogrammetry</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero wrap">
+    <h1>Corridor Key vs DaVinci Resolve's 3D Keyer</h1>
+  </section>
+
+  <!-- ================= INTRODUCTION ================= -->
+  <section id="introduction" class="wrap">
+    <div class="prose">
+      <p class="kicker">Introduction</p>
+      <p>
+        The aim of this test will be to compare the results of Corridor Key, a machine learning
+        based green screening tool, with the results of Davinci Resolve's 3D keyer, one of the
+        most effective and easily accessible green screen solutions available to VFX artists.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="plan" class="wrap">
+    <div class="prose">
+      <p class="kicker">Plan</p>
+      <p>
+        To conduct this test, I will experiment on a series of Green Screen shots using original
+        footage and background plates from two of my short films, <em>"Everyone's Afraid of the Dark"</em>
+        (2024) and <em>"Black Listed"</em> (2025).
+      </p>
+      <p>
+        I will recomposite each shot exactly as I did for the original versions, with the only
+        difference being that the green screen keying will be completed using Corridor Key
+        (Specifically the OFX v0.7.3 plugin enabling corridor key to run within Davinci Resolve,
+        details available here:
+        <a href="https://github.com/alexandremendoncaalvaro/CorridorKey-Runtime/releases/tag/v0.7.3" target="_blank" rel="noopener">https://github.com/alexandremendoncaalvaro/CorridorKey-Runtime/releases/tag/v0.7.3</a>
+        ).
+      </p>
+      <p>
+        These shots will have a variety of issues, including motion blur, unevenly lit backgrounds
+        and soft focus, characteristics that can be highly problematic with traditional keying
+        methodologies, in order to push corridor key and find out how it handles aspects that make
+        shots difficult or impossible ordinarily.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= FRAMEWORK ================= -->
+  <section id="framework" class="wrap">
+    <div class="prose">
+      <p class="kicker">Presentation of findings</p>
+      <p>
+        Unfortunately, the results of these tests will be difficult, if not impossible, to
+        present in a quantitative manner. As such, I feel it is best to instead opt for a more
+        qualitative analysis. To do this while still remaining as objective as possible, I will
+        look at each shot from 3 different points of view: Visual fidelity (A personal judgement
+        of the final shot and which looks more realistic), Technical fidelity (Comparing the
+        Alpha Maps to better analyse how elements such as motion blur and soft focus are
+        handled), and Efficacy of Process (how simple the process of generating the result is).
+        For each of these categories, on each shot, a "point" (for lack of a better term) will be
+        awarded. These "points" can then be accounted for and allow for a somewhat quantitative
+        finding to be presented, demonstrating alongside the qualitative analysis which the
+        better methodology is, and by what margin.
+      </p>
+    </div>
+
+    <div class="triad">
+      <div class="card">
+        <span class="tag">01 / VISUAL</span>
+        <h3>Visual fidelity</h3>
+        <p>A personal judgement of the final shot and which looks more realistic.</p>
+      </div>
+      <div class="card">
+        <span class="tag">02 / TECHNICAL</span>
+        <h3>Technical fidelity</h3>
+        <p>Comparing the Alpha Maps to better analyse how elements such as motion blur and soft focus are handled.</p>
+      </div>
+      <div class="card">
+        <span class="tag">03 / PROCESS</span>
+        <h3>Efficacy of process</h3>
+        <p>How simple the process of generating the result is.</p>
+      </div>
+    </div>
+    <p class="scoring-note">
+      See how each shot scored across all three categories in
+      <a href="#results">Results</a>, below the hypothesis.
+    </p>
+  </section>
+
+  <!-- ================= HYPOTHESIS ================= -->
+  <section id="hypothesis" class="wrap">
+    <div class="prose">
+      <p class="kicker">Expectations / Hypothesis</p>
+      <p>
+        I anticipate from the research I have done, that Corridor Key will offer a higher quality
+        end result, handily winning out in visual and technical fidelity particularly when
+        handling the aforementioned issues of motion blur, poor lighting and soft focus. Where I
+        expect more traditional keying may still hold it's own is in efficacy of process.
+      </p>
+      <p>
+        Corridor key requires an "Alpha Hint" a traditionally keyed version of the shot which can
+        be imperfect, but which must be done before the AI version can produce the final key.
+        Because of this, corridor key in effect adds an additional step to the keying pipeline.
+        While the alpha hint not needing to be perfect means that less time needs to be spent on
+        the keyed version, I am not sure whether the time savings from doing less
+        "fine-toothed-comb" clean up work will be enough to make corridor key more efficient,
+        particularly when working with shots that are already well optimised for Green Screen
+        Keying.
+      </p>
+      <p>
+        In conclusion, I am expecting Corridor Key to yield higher quality results, while only
+        making negligible (if any) improvements to the efficiency and efficacy of the keying
+        process.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= TOOL ================= -->
+  <section id="tool" class="wrap">
+    <div class="tool-head">
+      <div>
+        <p class="kicker">Comparison tool</p>
+        <p>Drag the crosshair, or use the two sliders, to move between channel and version independently.</p>
+      </div>
+      <div class="shot-tabs" id="shotTabs" role="tablist" aria-label="Shot selector"></div>
+    </div>
+
+    <div class="stage-shell">
+      <div class="stage-meta">
+        <span id="metaShot">SHOT 00</span>
+        <span class="shot-desc" id="metaDesc"></span>
+      </div>
+
+      <div class="stage-body">
+        <div class="axis-v">
+          <span class="lab top">VIDEO</span>
+          <div class="vrange-holder">
+            <input type="range" class="vrange" id="rangeY" min="0" max="100" value="50"
+              aria-label="Channel: video to alpha" aria-orientation="vertical">
+          </div>
+          <span class="lab bottom">ALPHA</span>
+        </div>
+
+        <div class="stage" id="stage" tabindex="0"
+             aria-label="Two-axis video comparison. Drag vertically to switch between video and alpha channel. Drag horizontally to compare the original and Corridor Key version. Arrow keys also work.">
+          <video id="vidTL" muted loop playsinline preload="auto"></video>
+          <video id="vidTR" muted loop playsinline preload="auto"></video>
+          <video id="vidBL" muted loop playsinline preload="auto"></video>
+          <video id="vidBR" muted loop playsinline preload="auto"></video>
+
+          <span class="quad-label tl">ORIGINAL · VIDEO</span>
+          <span class="quad-label tr">CORRIDOR KEY · VIDEO</span>
+          <span class="quad-label bl">ORIGINAL · ALPHA</span>
+          <span class="quad-label br">CORRIDOR KEY · ALPHA</span>
+
+          <div class="guide h" id="guideH"></div>
+          <div class="guide v" id="guideV"></div>
+          <div class="crosshair" id="crosshair"></div>
+        </div>
+
+        <div class="axis-h">
+          <span class="lab left">ORIGINAL</span>
+          <input type="range" class="hrange" id="rangeX" min="0" max="100" value="50"
+            aria-label="Version: original to Corridor Key">
+          <span class="lab right">CORRIDOR KEY</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="play" id="playBtn" aria-label="Play">
+          <svg id="iconPlay" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 1L11 6L2 11V1Z" fill="#ECEBE4"/></svg>
+          <svg id="iconPause" width="12" height="12" viewBox="0 0 12 12" fill="none" style="display:none"><rect x="2" y="1" width="3" height="10" fill="#ECEBE4"/><rect x="7" y="1" width="3" height="10" fill="#ECEBE4"/></svg>
+        </button>
+        <div class="scrub">
+          <input type="range" class="scrub" id="scrub" min="0" max="100" value="0" step="0.1" aria-label="Playback position">
+        </div>
+        <span class="time mono" id="timeReadout">0:00 / 0:00</span>
+      </div>
+    </div>
+
+    <p class="tool-foot-note">Playback is muted across all four channels, so frame‑for‑frame comparison stays free of audio drift.</p>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section id="results" class="wrap">
+    <div class="prose">
+      <p class="kicker">Results</p>
+      <p>
+        Corridor Key and the original DaVinci Resolve keying were scored head‑to‑head across
+        three shots and three categories, nine points in total, exactly as laid out in
+        Presentation of findings above.
+      </p>
+    </div>
+
+    <div class="results-summary">
+      <div class="donut-wrap">
+        <svg class="donut" viewBox="0 0 42 42" role="img" aria-label="Total points: Corridor Key 6 of 9, Original 3 of 9">
+          <circle class="donut-track" cx="21" cy="21" r="15.9155"></circle>
+          <circle class="donut-seg ck" cx="21" cy="21" r="15.9155"></circle>
+          <circle class="donut-seg rs" cx="21" cy="21" r="15.9155"></circle>
+          <text x="21" y="19.5" class="donut-total">6&ndash;3</text>
+          <text x="21" y="26" class="donut-sub">OF 9 POINTS</text>
+        </svg>
+      </div>
+      <div class="verdicts">
+        <div class="verdict-row">
+          <span class="v-cat">Visual fidelity</span>
+          <span class="v-badge ck">Corridor Key &middot; 3/3</span>
+        </div>
+        <div class="verdict-row">
+          <span class="v-cat">Technical fidelity</span>
+          <span class="v-badge ck">Corridor Key &middot; 3/3</span>
+        </div>
+        <div class="verdict-row">
+          <span class="v-cat">Efficacy of Process</span>
+          <span class="v-badge rs">Original &middot; 3/3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="matrix" role="table" aria-label="Points awarded per shot and category">
+      <div class="mcell mhead" role="columnheader"></div>
+      <div class="mcell mhead" role="columnheader">Visual fidelity</div>
+      <div class="mcell mhead" role="columnheader">Technical fidelity</div>
+      <div class="mcell mhead" role="columnheader">Efficacy of process</div>
+
+      <div class="mcell mrow" role="rowheader">Shot 1</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip rs">Original</div>
+
+      <div class="mcell mrow" role="rowheader">Shot 2</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip rs">Original</div>
+
+      <div class="mcell mrow" role="rowheader">Shot 3</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip ck">Corridor Key</div>
+      <div class="mcell chip rs">Original</div>
+    </div>
+
+    <div class="conclusion prose">
+      <p class="kicker">Conclusion</p>
+      <p>
+        Overall, it is clear that Corridor Key produces higher quality results than traditional
+        keying. It handles details such as motion blur much better, as well as fine details such
+        as hair (where it sometimes reduces the definition of the detail while reducing temporal
+        flickering, giving a more pleasing end result.
+      </p>
+      <p>
+        However, unlike the fast majority of AI tools, it does not improve the speed of the
+        workflow (efficacy of process in scoring). Unlike what I had predicted, having to produce
+        the alpha hint using traditional keying methodologies does not actually slow you down too
+        much, as you can be far more &ldquo;rough and ready&rdquo; than if you were to produce a
+        final shot using traditional keying; the real bottleneck is in the rendering of the
+        shots.
+      </p>
+      <p>
+        Where traditional keying can be played back almost in real time, and rasterised in
+        seconds, real time playback with corridor key is utterly impossible, and rendering out a
+        shot of a approximately 10 seconds could take upwards of ten minutes (using an intel core
+        i5 and an Nvidia RTX GPU). This slows down the rate of iteration and means that if you
+        were to integrate this tool into a production pipeline, you would be better off iterating
+        rough versions using traditional keying to take advantage of faster playback, and then
+        using Corridor Key to produce a final high fidelity version of the shot.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+
+  /* =========================================================
+     SHOT MANIFEST — reads directly from the Corridor_Key_Channels
+     folder. Drop that folder in the SAME directory as this HTML
+     file (so the path below is "Corridor_Key_Channels/…").
+
+     File naming convention (as supplied):
+       Original_Colour_Shot_<n>   -> original, video channel
+       Corridor_Colour_Shot_<n>   -> Corridor Key, video channel
+       Original_Alpha_Shot_<n>    -> original, alpha channel
+       Corridor_Alpha_Shot_<n>    -> Corridor Key, alpha channel
+
+     If your exports aren't .mov, change FILE_EXT below — every
+     path updates from that one line. Note: browsers other than
+     Safari generally can't decode ProRes/Animation-codec .mov
+     files. If clips fail to load in Chrome/Firefox/Edge, re-export
+     each one as H.264 (or the same file with an .mp4 container)
+     and update FILE_EXT to ".mp4".
+  ========================================================= */
+  const CHANNELS_DIR = "Corridor_Key_Channels";
+  const FILE_EXT = ".mov";
+
+  function shotFiles(n){
+    return {
+      origVideo: `${CHANNELS_DIR}/Original_Colour_Shot_${n}${FILE_EXT}`,
+      ckVideo:   `${CHANNELS_DIR}/Corridor_Colour_Shot_${n}${FILE_EXT}`,
+      origAlpha: `${CHANNELS_DIR}/Original_Alpha_Shot_${n}${FILE_EXT}`,
+      ckAlpha:   `${CHANNELS_DIR}/Corridor_Alpha_Shot_${n}${FILE_EXT}`
+    };
+  }
+
+  const SHOTS = [1, 2, 3].map(n => ({
+    id: "shot-" + n,
+    label: "Shot " + n,
+    desc: "Corridor_Key_Channels, shot " + n,
+    video: shotFiles(n)
+  }));
+
+  const stage      = document.getElementById('stage');
+  const vidTL = document.getElementById('vidTL'); // original / video
+  const vidTR = document.getElementById('vidTR'); // corridor key / video
+  const vidBL = document.getElementById('vidBL'); // original / alpha
+  const vidBR = document.getElementById('vidBR'); // corridor key / alpha
+  const videos = [vidTL, vidTR, vidBL, vidBR];
+
+  const crosshair = document.getElementById('crosshair');
+  const guideH = document.getElementById('guideH');
+  const guideV = document.getElementById('guideV');
+  const rangeX = document.getElementById('rangeX');
+  const rangeY = document.getElementById('rangeY');
+  const shotTabs = document.getElementById('shotTabs');
+  const metaShot = document.getElementById('metaShot');
+  const metaDesc = document.getElementById('metaDesc');
+  const playBtn = document.getElementById('playBtn');
+  const iconPlay = document.getElementById('iconPlay');
+  const iconPause = document.getElementById('iconPause');
+  const scrub = document.getElementById('scrub');
+  const timeReadout = document.getElementById('timeReadout');
+
+  let pos = { x: 50, y: 50 };
+  let dragging = false;
+
+  function fmt(t){
+    if (!isFinite(t)) return "0:00";
+    const m = Math.floor(t/60), s = Math.floor(t%60);
+    return m + ":" + String(s).padStart(2,'0');
+  }
+
+  function setClip(){
+    const x = pos.x, y = pos.y;
+    vidTL.style.clipPath = `inset(0% ${100-x}% ${100-y}% 0%)`;
+    vidTR.style.clipPath = `inset(0% 0% ${100-y}% ${x}%)`;
+    vidBL.style.clipPath = `inset(${y}% ${100-x}% 0% 0%)`;
+    vidBR.style.clipPath = `inset(${y}% 0% 0% ${x}%)`;
+    crosshair.style.left = x + '%';
+    crosshair.style.top = y + '%';
+    guideH.style.top = y + '%';
+    guideV.style.left = x + '%';
+  }
+
+  function setPosition(x, y, fromRange){
+    pos.x = Math.min(100, Math.max(0, x));
+    pos.y = Math.min(100, Math.max(0, y));
+    setClip();
+    if (!fromRange){
+      rangeX.value = pos.x;
+      rangeY.value = pos.y;
+    }
+  }
+
+  // pointer drag on the stage
+  function pointFromEvent(e){
+    const r = stage.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+    const x = ((cx - r.left) / r.width) * 100;
+    const y = ((cy - r.top) / r.height) * 100;
+    return {x, y};
+  }
+
+  stage.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    stage.setPointerCapture(e.pointerId);
+    const p = pointFromEvent(e);
+    setPosition(p.x, p.y);
+  });
+  stage.addEventListener('pointermove', (e)=>{
+    if (!dragging) return;
+    const p = pointFromEvent(e);
+    setPosition(p.x, p.y);
+  });
+  window.addEventListener('pointerup', ()=>{ dragging = false; });
+
+  // keyboard control on the stage
+  stage.addEventListener('keydown', (e)=>{
+    const step = e.shiftKey ? 10 : 3;
+    if (e.key === 'ArrowLeft')  { setPosition(pos.x - step, pos.y); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { setPosition(pos.x + step, pos.y); e.preventDefault(); }
+    if (e.key === 'ArrowUp')    { setPosition(pos.x, pos.y - step); e.preventDefault(); }
+    if (e.key === 'ArrowDown')  { setPosition(pos.x, pos.y + step); e.preventDefault(); }
+  });
+
+  // explicit range inputs (accessible / precise control)
+  rangeX.addEventListener('input', ()=> setPosition(parseFloat(rangeX.value), pos.y, true));
+  rangeY.addEventListener('input', ()=> setPosition(pos.x, parseFloat(rangeY.value), true));
+
+  // ---- playback sync across all four channels ----
+  let isPlaying = false;
+
+  function playAll(){
+    videos.forEach(v => v.play().catch(()=>{}));
+    isPlaying = true;
+    iconPlay.style.display = 'none';
+    iconPause.style.display = '';
+    playBtn.setAttribute('aria-label','Pause');
+  }
+  function pauseAll(){
+    videos.forEach(v => v.pause());
+    isPlaying = false;
+    iconPlay.style.display = '';
+    iconPause.style.display = 'none';
+    playBtn.setAttribute('aria-label','Play');
+  }
+  playBtn.addEventListener('click', ()=> isPlaying ? pauseAll() : playAll());
+
+  vidTL.addEventListener('timeupdate', ()=>{
+    const t = vidTL.currentTime, d = vidTL.duration || 0;
+    if (d > 0){
+      scrub.value = (t / d) * 100;
+      timeReadout.textContent = fmt(t) + ' / ' + fmt(d);
+    }
+    [vidTR, vidBL, vidBR].forEach(v=>{
+      if (Math.abs(v.currentTime - t) > 0.15 && isFinite(v.duration)) v.currentTime = t;
+    });
+  });
+
+  scrub.addEventListener('input', ()=>{
+    const d = vidTL.duration || 0;
+    const t = (scrub.value / 100) * d;
+    videos.forEach(v => { if (isFinite(v.duration)) v.currentTime = t; });
+  });
+
+  // ---- shot loading ----
+  function loadShot(shot){
+    vidTL.src = shot.video.origVideo;
+    vidTR.src = shot.video.ckVideo;
+    vidBL.src = shot.video.origAlpha;
+    vidBR.src = shot.video.ckAlpha;
+    videos.forEach(v => v.load());
+    metaShot.textContent = 'SHOT ' + shot.label.toUpperCase();
+    metaDesc.textContent = shot.desc || '';
+    pauseAll();
+    setPosition(50, 50);
+  }
+
+  function buildTabs(){
+    shotTabs.innerHTML = '';
+    SHOTS.forEach((shot, i)=>{
+      const btn = document.createElement('button');
+      btn.textContent = shot.label;
+      btn.type = 'button';
+      btn.role = 'tab';
+      btn.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+      btn.addEventListener('click', ()=>{
+        [...shotTabs.children].forEach(c => c.setAttribute('aria-pressed','false'));
+        btn.setAttribute('aria-pressed','true');
+        loadShot(shot);
+      });
+      shotTabs.appendChild(btn);
+    });
+  }
+
+  buildTabs();
+  loadShot(SHOTS[0]);
+  setClip();
+
+})();
+</script>
+
+<footer>
+  <div class="wrap">
+    <span>Corridor Key vs DaVinci Resolve 3D Keyer: a comparative test.</span>
+    <span>Keying via <a href="https://github.com/alexandremendoncaalvaro/CorridorKey-Runtime/releases/tag/v0.7.3" target="_blank" rel="noopener">CorridorKey‑Runtime v0.7.3</a></span>
+  </div>
+</footer>
+</body>
+</html>
